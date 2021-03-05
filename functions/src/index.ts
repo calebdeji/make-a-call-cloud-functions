@@ -1,5 +1,6 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import * as cors from "cors";
 import { CloudTasksClient } from "@google-cloud/tasks";
 
 import { SetUpCallRequestBody, CallData } from "./types";
@@ -11,24 +12,28 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 
-exports.setUpCall = functions.https.onRequest(async (request, response) => {
-  try {
-    const { phone_number, time } = request.body as SetUpCallRequestBody;
-    const created_at = Date.now();
-    await admin
-      .firestore()
-      .collection("calls")
-      .add({ phone_number, time, created_at });
+const corsHandler = cors({ origin: true });
 
-    response
-      .status(200)
-      .json({ status: "successfull", message: `Call successfully added` });
-  } catch (error) {
-    response.status(400).json({
-      status: "Error",
-      message: "Unable to add a call, kindly contact the admin",
-    });
-  }
+exports.setUpCall = functions.https.onRequest(async (request, response) => {
+  corsHandler(request, response, async () => {
+    try {
+      const { phone_number, time } = request.body as SetUpCallRequestBody;
+      const created_at = Date.now();
+      await admin
+        .firestore()
+        .collection("calls")
+        .add({ phone_number, time, created_at });
+
+      response
+        .status(200)
+        .json({ status: "successfull", message: `Call successfully enquede` });
+    } catch (error) {
+      response.status(400).json({
+        status: "Error",
+        message: "Unable to add a call, kindly contact the admin",
+      });
+    }
+  });
 });
 
 exports.makeCallToTwilio = functions.https.onRequest(async (req, res) => {
